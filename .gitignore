@@ -1,26 +1,15 @@
-# Python
 __pycache__/
 *.pyc
 *.pyo
-*.pyd
 build/
 dist/
 *.spec
 *.egg-info/
 venv/
 .venv/
-.env
-
-# Private config and logs (never commit)
 config.json
 audit.log
-*.log
-
-# OS
 .DS_Store
 Thumbs.db
-
-# IDE
 .vscode/
 .idea/
-*.swp
