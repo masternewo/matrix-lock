@@ -1,4 +1,4 @@
-name: Build MatrixLock EXE
+name: Build MatrixLock EXE v2.1
 on:
   push:
     branches: [ main ]
@@ -13,23 +13,26 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
       - name: Install deps
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+      - name: Verify main.py
+        run: python -m py_compile main.py && echo "✅ main.py syntax OK"
       - name: Build EXE
-        run: |
-          python -m PyInstaller --onefile --noconsole --name MatrixLock main.py
+        run: python build.py
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: MatrixLock-win64
+          name: MatrixLock-v2.1-win64
           path: dist/MatrixLock.exe
-      - name: Create Release
+          if-no-files-found: error
+      - name: Create Release (manual only)
         if: github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v2.0-${{ github.run_number }}
-          name: Matrix Lock v2.0 Build ${{ github.run_number }}
+          tag_name: v2.1-${{ github.run_number }}
+          name: Matrix Lock v2.1 Build ${{ github.run_number }}
           files: dist/MatrixLock.exe
           generate_release_notes: true
