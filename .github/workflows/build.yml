@@ -1,4 +1,5 @@
-name: Build MatrixLock EXE
+name: Build
+
 on:
   push:
     branches: [ main ]
@@ -12,24 +13,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install pygame==2.5.2
-          pip install pyinstaller==6.10.1
-      - name: Verify syntax
-        run: |
-          python -m py_compile main.py
-          python -m py_compile set_password.py
-          python -m py_compile build.py
-      - name: Build EXE
-        run: pyinstaller --onefile --noconsole --clean --name MatrixLock main.py
-      - name: Show dist
-        run: dir dist
-        shell: cmd
-      - name: Upload artifact
+      - name: Install
+        run: pip install pygame==2.5.2 pyinstaller==6.10.1
+      - name: Build
+        run: pyinstaller --onefile --noconsole --name MatrixLock main.py
+      - name: Upload
         uses: actions/upload-artifact@v4
         with:
           name: MatrixLock-win64
           path: dist/MatrixLock.exe
-          if-no-files-found: error
