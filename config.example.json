@@ -4,6 +4,5 @@
   "hide_timeout": 30,
   "font_size": 18,
   "matrix_speed": 1.0,
-  "matrix_color": [0, 255, 70],
-  "hint": "رمز پیشفرض: 1234"
+  "matrix_color": [0, 255, 70]
 }

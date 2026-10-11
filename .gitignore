@@ -3,36 +3,24 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
-*.pyw
-*.pdb
 build/
 dist/
 *.spec
 *.egg-info/
 venv/
 .venv/
-env/
 .env
-*.log
-*.sqlite3
 
-# Config secrets - نظامی: هرگز کامیت نشود
+# Private config and logs (never commit)
 config.json
 audit.log
+*.log
 
 # OS
 .DS_Store
 Thumbs.db
-desktop.ini
-*.lnk
 
 # IDE
 .vscode/
 .idea/
 *.swp
-*.swo
-*~
-
-# PyInstaller
-*.manifest
-*.pyinstaller
