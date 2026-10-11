@@ -1,12 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Matrix Lock v2.1 - قفل صفحه ماتریکسی ویندوز
-- افکت باران کد ماتریکس گرافیکی
-- انیمیشن محو شدن نرم (Fade) برای جعبه قفل
-- قفل خودکار + محو صفحه بعد از hide_timeout
-- ضد دور زدن: Win, Alt+Tab, Alt+F4, Ctrl+Esc, Ctrl+Shift+Esc
-- همیشه TOPMOST + بازگردانی فوکوس
-نکته: Ctrl+Alt+Del توسط ویندوز قابل مسدودسازی نیست (Secure Attention Sequence)
+Matrix Lock v2.2 MIL-SPEC Step 3-1
+افزوده: مقایسه امن هش (hmac) + ضد Brute-Force (قفل 30 ثانیه بعد 3 اشتباه)
+بقیه کد بدون تغییر - مرحله ای برای جلوگیری از خطا
 """
 import pygame
 import random
@@ -14,6 +10,7 @@ import sys
 import os
 import json
 import hashlib
+import hmac
 import time
 import ctypes
 import threading
@@ -33,6 +30,14 @@ DEFAULT_CONFIG = {
 }
 
 WIDTH, HEIGHT = 0, 0
+
+# MIL-SPEC: ضد Brute-Force
+MAX_ATTEMPTS = 3
+LOCKOUT_DURATION = 30  # ثانیه
+
+def verify_password(input_pw: str, stored_hash: str) -> bool:
+    """مقایسه امن ضد timing-attack"""
+    return hmac.compare_digest(hash_password(input_pw), stored_hash)
 
 def load_config():
     if not os.path.exists(CONFIG_PATH):
@@ -112,7 +117,7 @@ def low_level_keyboard_proc(nCode, wParam, lParam):
                 block = True
             if ctrl_down and shift_down and vkCode == VK_DELETE:
                 block = True
-            if vkCode == 0x5D: # Menu key
+            if vkCode == 0x5D:
                 block = True
             if block:
                 return 1
@@ -202,7 +207,7 @@ def main():
         WIDTH, HEIGHT = 1920, 1080
 
     screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.NOFRAME | pygame.DOUBLEBUF)
-    pygame.display.set_caption("Matrix Lock v2.1")
+    pygame.display.set_caption("Matrix Lock v2.2 MIL-SPEC")
     clock = pygame.time.Clock()
 
     pygame.mouse.set_visible(False)
@@ -217,7 +222,6 @@ def main():
 
     make_topmost()
 
-    # هوک در ترد جدا (فقط ویندوز)
     try:
         if os.name == "nt":
             t = threading.Thread(target=install_hook, daemon=True)
@@ -238,63 +242,58 @@ def main():
     msg_color = (255, 255, 100)
     msg_time = 0
     lock_start_time = time.time()
-    show_box_target = True  # هدف نمایش
-    box_alpha = 255  # برای Fade نرم 0-255
-    FADE_SPEED = 18  # سرعت محو شدن
+    show_box_target = True
+    box_alpha = 255
+    FADE_SPEED = 18
 
-    # برای تغییر رمز داخل برنامه (F2)
+    # MIL-SPEC brute-force
+    failed_attempts = 0
+    lockout_until = 0
+
     changing_pw = False
     new_pw = ""
     new_pw2 = ""
-    pw_step = 0 # 0=رمز جدید, 1=تکرار
+    pw_step = 0
 
     running = True
 
     def draw_lock_ui(surf, alpha=255):
-        """رسم جعبه قفل با آلفا برای Fade"""
         if alpha <= 0:
             return
-        box_w, box_h = 520, 340
+        box_w, box_h = 520, 360
         box_x = (WIDTH - box_w)//2
         box_y = (HEIGHT - box_h)//2
-
-        # سطح شیشه‌ای با آلفا
         overlay = pygame.Surface((box_w, box_h), pygame.SRCALPHA)
         a = int(185 * alpha / 255)
         overlay.fill((0, 20, 0, a))
         pygame.draw.rect(overlay, (0, 255, 70), (0,0,box_w,box_h), 2, border_radius=18)
-        # اعمال آلفا کلی
         overlay.set_alpha(alpha)
         surf.blit(overlay, (box_x, box_y))
-
-        # برای اینکه متن هم fade شود، یک سطح موقت میسازیم
-        # فعلا متن را مستقیم با آلفا کم میکشیم
-        def blit_alpha(text_surf, pos):
-            text_surf.set_alpha(alpha)
-            surf.blit(text_surf, pos)
-
         title = font_big.render("🔒  سیستم قفل است", True, (0,255,120))
         title.set_alpha(alpha)
         surf.blit(title, (box_x + (box_w - title.get_width())//2, box_y + 22))
-
         sub = font_mid.render("رمز را وارد کنید و Enter بزنید", True, (180,255,180))
         sub.set_alpha(alpha)
         surf.blit(sub, (box_x + (box_w - sub.get_width())//2, box_y + 80))
-
         now = datetime.now().strftime("%H:%M:%S  -  %Y/%m/%d")
         time_txt = font_mid.render(now, True, (0,255,70))
         time_txt.set_alpha(alpha)
         surf.blit(time_txt, (box_x + (box_w - time_txt.get_width())//2, box_y + 112))
-
-        field_y = box_y + 155
+        # نمایش قفل brute-force
+        if time.time() < lockout_until:
+            remain = int(lockout_until - time.time())
+            lock_txt = font_small.render(f"⛔ قفل امنیتی: {remain} ثانیه صبر کنید ({failed_attempts}/{MAX_ATTEMPTS})", True, (255,60,60))
+            lock_txt.set_alpha(alpha)
+            surf.blit(lock_txt, (box_x + (box_w - lock_txt.get_width())//2, box_y + 138))
+            field_y = box_y + 165
+        else:
+            field_y = box_y + 155
         field_rect = pygame.Rect(box_x+40, field_y, box_w-80, 48)
-        # فیلد با آلفا
         field_surf = pygame.Surface((field_rect.width, field_rect.height), pygame.SRCALPHA)
         field_surf.fill((0,0,0, int(220*alpha/255)))
         pygame.draw.rect(field_surf, (0,255,70), (0,0,field_rect.width, field_rect.height), 2, border_radius=10)
         field_surf.set_alpha(alpha)
         surf.blit(field_surf, (field_rect.x, field_rect.y))
-
         dots = "●" * len(input_pw)
         if dots == "":
             hint = font_small.render("رمز عبور...", True, (100,180,100))
@@ -307,19 +306,16 @@ def main():
             if int(time.time()*2) % 2 == 0:
                 cx = field_rect.x+14+txt.get_width()+4
                 pygame.draw.line(surf, (0,255,70), (cx, field_rect.y+10), (cx, field_rect.y+34), 2)
-
         if message and time.time()-msg_time < 3:
             mtxt = font_small.render(message, True, msg_color)
             mtxt.set_alpha(alpha)
             surf.blit(mtxt, (box_x + (box_w - mtxt.get_width())//2, field_y+60))
-
         help1 = font_small.render("Esc پاک کردن  •  Alt+F4 و Win مسدود", True, (120,200,120))
         help1.set_alpha(alpha)
         surf.blit(help1, (box_x + (box_w - help1.get_width())//2, box_y + box_h - 52))
         help2 = font_small.render("Ctrl+Shift+L قفل دستی | Enter تایید", True, (90,170,90))
         help2.set_alpha(alpha)
         surf.blit(help2, (box_x + (box_w - help2.get_width())//2, box_y + box_h - 28))
-
         warn = font_small.render("Ctrl+Alt+Del توسط ویندوز مسدود نمیشود", True, (200,200,100))
         warn.set_alpha(int(alpha*0.9))
         surf.blit(warn, ((WIDTH - warn.get_width())//2, HEIGHT - 40))
@@ -327,25 +323,22 @@ def main():
     while running:
         dt = clock.tick(50)
         IS_LOCKED_REF[0] = locked
-
-        # قفل خودکار
         if not locked and not changing_pw and config["idle_timeout"] > 0:
             if get_idle_duration() >= config["idle_timeout"]:
                 locked = True
                 show_box_target = True
                 lock_start_time = time.time()
                 input_pw = ""
+                failed_attempts = 0
+                lockout_until = 0
                 message = "قفل خودکار فعال شد"
                 msg_color = (0,255,120)
                 msg_time = time.time()
                 pygame.mouse.set_visible(False)
                 make_topmost()
-
-        # منطق محو شدن - Fade
         if locked:
             elapsed = time.time() - lock_start_time
             if elapsed > config["hide_timeout"] and config["hide_timeout"] > 0 and input_pw == "":
-                # هیچ ورودی نیست -> هدف محو شدن
                 try:
                     keys = pygame.key.get_pressed()
                     any_pressed = any(keys)
@@ -358,15 +351,12 @@ def main():
                     lock_start_time = time.time()
             else:
                 show_box_target = True
-
-            # انیمیشن نرم
             if show_box_target:
                 box_alpha = min(255, box_alpha + FADE_SPEED)
             else:
                 box_alpha = max(0, box_alpha - FADE_SPEED)
         else:
             box_alpha = 255
-
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 if locked:
@@ -376,9 +366,7 @@ def main():
                     make_topmost()
                 else:
                     running = False
-
             elif event.type == pygame.KEYDOWN:
-                # میانبر قفل دستی
                 mods = pygame.key.get_mods()
                 if event.key == pygame.K_l and (mods & pygame.KMOD_CTRL) and (mods & pygame.KMOD_SHIFT):
                     if not locked and not changing_pw:
@@ -392,8 +380,6 @@ def main():
                         msg_color = (0,255,120)
                         msg_time = time.time()
                     continue
-
-                # حالت تغییر رمز (وقتی باز است + F2)
                 if changing_pw:
                     if event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER:
                         if pw_step == 0:
@@ -444,7 +430,6 @@ def main():
                             elif pw_step == 1 and len(new_pw2) < 32:
                                 new_pw2 += event.unicode
                     continue
-
                 if not locked:
                     if event.key == pygame.K_ESCAPE:
                         running = False
@@ -457,22 +442,30 @@ def main():
                         msg_color = (100,200,255)
                         msg_time = time.time()
                     continue
-
-                # در حالت قفل: ورودی رمز
                 show_box_target = True
                 lock_start_time = time.time()
-                # اگر الفای کمه، سریع بیار بالا
                 if box_alpha < 100:
                     box_alpha = 100
                 if event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER:
-                    if hash_password(input_pw) == config["password_hash"]:
+                    if time.time() < lockout_until:
+                        message = f"⛔ قفل امنیتی! {int(lockout_until - time.time())} ثانیه صبر کنید"
+                        msg_color = (255,80,80)
+                        msg_time = time.time()
+                    elif verify_password(input_pw, config["password_hash"]):
                         locked = False
                         input_pw = ""
+                        failed_attempts = 0
+                        lockout_until = 0
                         message = ""
                         box_alpha = 255
                         pygame.mouse.set_visible(True)
                     else:
-                        message = "❌ رمز نادرست!"
+                        failed_attempts += 1
+                        if failed_attempts >= MAX_ATTEMPTS:
+                            lockout_until = time.time() + LOCKOUT_DURATION
+                            message = f"❌ 3 بار اشتباه! {LOCKOUT_DURATION} ثانیه قفل شدید"
+                        else:
+                            message = f"❌ رمز نادرست! ({failed_attempts}/{MAX_ATTEMPTS})"
                         msg_color = (255,70,70)
                         msg_time = time.time()
                         input_pw = ""
@@ -485,8 +478,8 @@ def main():
                     msg_time = time.time()
                 else:
                     if event.unicode and len(input_pw) < 32 and ord(event.unicode) >= 32:
-                        input_pw += event.unicode
-
+                        if time.time() >= lockout_until:
+                            input_pw += event.unicode
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if locked:
                     show_box_target = True
@@ -497,8 +490,6 @@ def main():
                 if locked and box_alpha < 50:
                     show_box_target = True
                     lock_start_time = time.time()
-
-        # نگه داشتن TOPMOST
         if locked and int(time.time()*3) % 3 == 0:
             try:
                 if os.name == "nt":
@@ -508,17 +499,13 @@ def main():
                         ctypes.windll.user32.SetWindowPos(hwnd, -1, 0,0,0,0, 0x0001|0x0002|0x0010)
             except:
                 pass
-
-        # رندر
         screen.fill((0,0,0))
         for d in drops:
             d.update()
             d.draw(screen, tuple(config["matrix_color"]))
-
         dim = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
         dim.fill((0,0,0,70))
         screen.blit(dim, (0,0))
-
         if locked:
             if box_alpha > 0:
                 draw_lock_ui(screen, alpha=box_alpha)
@@ -531,7 +518,6 @@ def main():
                 hint2 = font_small.render(f"محو خودکار بعد {config['hide_timeout']} ثانیه", True, (90,170,90))
                 screen.blit(hint2, ((WIDTH-hint2.get_width())//2, HEIGHT//2+30))
         else:
-            # داشبورد باز
             if changing_pw:
                 box_w, box_h = 520, 300
                 box_x = (WIDTH - box_w)//2
@@ -572,11 +558,9 @@ def main():
                 screen.blit(t3, ((WIDTH - t3.get_width())//2, HEIGHT//2 + 45))
                 t4 = font_small.render("ESC خروج", True, (90,170,90))
                 screen.blit(t4, ((WIDTH - t4.get_width())//2, HEIGHT//2 + 75))
-
-        wm = font_small.render("Matrix Lock v2.1  |  github.com/masternewo/matrix-lock", True, (0,180,70))
+        wm = font_small.render("Matrix Lock v2.2 MIL-SPEC | github.com/masternewo/matrix-lock", True, (0,180,70))
         screen.blit(wm, (14, HEIGHT-24))
         pygame.display.flip()
-
     pygame.quit()
     try:
         if HOOK_HANDLE:
