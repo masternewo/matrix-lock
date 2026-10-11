@@ -1,0 +1,9 @@
+{
+  "password_hash": "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4",
+  "idle_timeout": 60,
+  "hide_timeout": 30,
+  "font_size": 18,
+  "matrix_speed": 1.0,
+  "matrix_color": [0, 255, 70],
+  "hint": "رمز پیشفرض: 1234"
+}
