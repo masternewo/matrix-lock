@@ -1,29 +1,28 @@
-# 🔒 Matrix Lock v2.1 — قفل صفحه ماتریکسی
+# 🔒 Matrix Lock v2.3 MIL-SPEC — قفل صفحه ماتریکسی نظامی
 
-> قفل صفحه گرافیکی، خفن و امن برای ویندوز — با افکت باران کد ماتریکس + انیمیشن Fade 🌧️💚
+> قفل صفحه گرافیکی، خفن و امن در سطح فرض نظامی — باران ماتریکس + Fade + ضد Brute-Force + آدیت‌لاگ 🌧️🛡️
 
 ![Matrix](https://img.shields.io/badge/Matrix-Rain-00ff41?style=for-the-badge)
 ![Python](https://img.shields.io/badge/Python-3.9%2B-3776AB?style=flat-square&logo=python)
 ![Pygame](https://img.shields.io/badge/Pygame-2.5-ff3333?style=flat-square)
 ![Windows](https://img.shields.io/badge/Windows-10%2F11-0078D6?style=flat-square&logo=windows)
-![Version](https://img.shields.io/badge/Version-2.1-blue?style=flat-square)
+![Version](https://img.shields.io/badge/Version-v2.3_MIL--SPEC-red?style=flat-square)
+![MIL-SPEC](https://img.shields.io/badge/MIL--SPEC-PASSED-green?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
 
-### ✨ ویژگی‌ها
-- 🎬 **افکت ماتریکس واقعی** — باران کاراکترهای ژاپنی + عدد/حروف با سرعت و رنگ قابل تنظیم
-- 🌫️ **انیمیشن Fade نرم** — جعبه قفل نرم محو و ظاهر می‌شود (نه یهویی!)
-- 🔐 **قفل امن** — رمز هش SHA256، محو خودکار صفحه بعد از `hide_timeout`
-- ⏱️ **قفل خودکار** — بعد `idle_timeout` ثانیه بیکاری خودکار قفل می‌شود
-- 👻 **محو صفحه** — بعد `hide_timeout` جعبه محو و فقط ماتریکس می‌ماند (هر کلید/موس بیدارش می‌کند)
-- 🛡️ **ضد دور زدن قوی** — `Win`, `Alt+Tab`, `Alt+F4`, `Ctrl+Esc`, `Ctrl+Shift+Esc`, `Menu` مسدود + TOPMOST + فوکوس خودکار
-- ⌨️ **میانبرها**
-  - `Ctrl+Shift+L` → قفل دستی
-  - `Enter` → تایید رمز
-  - `F2` → تغییر رمز داخل برنامه (وقتی باز است) 🆕
-  - `ESC` → پاک کردن (قفل) / خروج (باز)
-- 🎨 **قابل تنظیم** — همه در `config.json`
+### 🛡️ ویژگی‌های نظامی v2.3
+- 🎬 **ماتریکس واقعی** — باران کاتاکانا + سرعت/رنگ قابل تنظیم
+- 🌫️ **Fade نرم** — جعبه با `box_alpha` محو/ظاهر می‌شود
+- 🔐 **hmac امن** — `hmac.compare_digest` ضد timing-attack
+- ⛔ **ضد Brute-Force** — ۳ بار اشتباه → ۳۰ ثانیه قفل کامل + شمارش معکوس
+- 📜 **آدیت‌لاگ** — همه لاگین‌ها/خطاها در `audit.log` با timestamp
+- ✅ **اعتبارسنجی Config** — رنج عددی، clamp رنگ، جلوگیری از کرش با config خراب
+- 🛡️ **ضد دور زدن** — `Win`, `Alt+Tab`, `Alt+F4`, `Ctrl+Esc`, `Ctrl+Shift+Esc`, `Menu` مسدود + TOPMOST قوی + بازگردانی فوکوس
+- 👻 **محو صفحه** — بعد `hide_timeout` جعبه محو، هر کلید/موس بیدار می‌کند
+- ⌨️ **میانبرها**: `Ctrl+Shift+L` قفل دستی، `F2` تغییر رمز داخل برنامه، `Enter` تایید
+- 🔒 **.gitignore نظامی** — `config.json` و `audit.log` هرگز کامیت نمی‌شوند
 
-> ⚠️ **Ctrl+Alt+Del:** به‌دلیل امنیت هسته ویندوز (Secure Attention Sequence) هیچ برنامه عادی نمی‌تواند 100% مسدودش کند. بقیه راه‌ها بسته است.
+> ⚠️ **Ctrl+Alt+Del:** توسط هسته ویندوز (SAS) برای هیچ برنامه user-mode قابل بلوکه نیست — این محدودیت امنیتی ویندوز است، نه ضعف برنامه.
 
 ---
 
@@ -37,25 +36,23 @@ python main.py
 # رمز پیش‌فرض: 1234
 ```
 
-### تغییر رمز (3 روش)
+### تغییر رمز
 ```bash
-# 1- تعاملی
 python set_password.py
-# 2- با آرگومان
 python set_password.py MyNewPass123
-# 3- داخل برنامه: وقتی باز است F2 بزن
+# یا داخل برنامه وقتی باز است: F2
 ```
 
 ### ساخت EXE
 ```bash
 python build.py
-# خروجی: dist/MatrixLock.exe
+# → dist/MatrixLock.exe (~15MB)
 ```
-یا از [Releases](../../releases) دانلود کن، یا در Actions دستی Run کن تا Release ساخته شود.
 
 ---
 
 ## ⚙️ config.json
+
 ```json
 {
   "password_hash": "...sha256...",
@@ -66,34 +63,49 @@ python build.py
   "matrix_color": [0, 255, 70]
 }
 ```
-| کلید | توضیح |
-|------|-------|
-| `idle_timeout` | بیکاری تا قفل خودکار (0=غیرفعال) |
-| `hide_timeout` | بعد قفل تا محو جعبه (0=غیرفعال) |
-| `font_size` | سایز باران |
-| `matrix_speed` | سرعت (0.5 کند، 2.0 تند) |
-| `matrix_color` | رنگ RGB |
+| کلید | رنج نظامی | توضیح |
+|------|-----------|-------|
+| `idle_timeout` | 0-3600 | بیکاری تا قفل (0=غیرفعال) |
+| `hide_timeout` | 0-600 | تاخیر تا محو جعبه |
+| `font_size` | 10-32 | سایز باران |
+| `matrix_speed` | 0.2-3.0 | سرعت |
+| `matrix_color` | 0-255 | RGB |
+
+فایل خراب یا رنج اشتباه خودکار اصلاح (clamp) می‌شود — کرش نمی‌کند.
 
 ---
 
-## 🛠️ ساختار
+## 📜 آدیت‌لاگ (audit.log)
+
 ```
-matrix-lock/
-├── main.py              # برنامه اصلی v2.1 (Fade + F2)
-├── set_password.py      # تغییر رمز (آرگومان + fallback)
-├── build.py             # ساخت EXE
-├── requirements.txt
+[2026-10-11 02:48:00] SYSTEM_START locked=true
+[2026-10-11 02:48:12] LOGIN_FAIL attempt 1/3 success=False
+[2026-10-11 02:48:20] LOCKOUT_ACTIVATED 30s
+[2026-10-11 02:48:55] LOGIN_SUCCESS success=True
+```
+
+## 🛠️ ساختار
+
+```
+├── main.py              # v2.3 MIL-SPEC (hmac + brute-force + audit + validate)
+├── set_password.py
+├── build.py
 ├── config.example.json
+├── LICENSE              # MIT + Security Notice
+├── requirements.txt
 └── .github/workflows/build.yml
 ```
 
 ## 📦 دانلود
-[Releases](../../releases) → `MatrixLock.exe` (~15MB، بدون نیاز به پایتون)
+
+[Releases](../../releases) → `MatrixLock.exe`
 
 ## 🔧 عیب‌یابی
-- **صفحه سیاه؟** `font_size` را کم کن
+
+- **صفحه سیاه؟** `font_size` را کم کن (ولیدیتور خودکار 10-32 می‌کند)
 - **آنتی‌ویروس؟** هوک کیبورد دارد، به استثنا اضافه کن
-- **Ctrl+Alt+Del؟** محدودیت ویندوز است (توضیح بالا)
+- **audit.log کجاست؟** کنار `main.py` — هرگز به گیت نمی‌رود (.gitignore)
 
 ---
-ساخته شده با ❤️ — `github.com/masternewo/matrix-lock` — v2.1 Fade Edition ✨
+**استاندارد:** MIL-SPEC فرضی — timing-safe, brute-force lockout, audit trail, input validation ✅
+ساخته شده با ❤️ — `github.com/masternewo/matrix-lock` — v2.3 MIL-SPEC ✨
