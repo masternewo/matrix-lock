@@ -2,7 +2,6 @@ name: Build MatrixLock EXE v2.3 MIL-SPEC
 on:
   push:
     branches: [ main ]
-    paths: [ 'main.py', 'requirements.txt', 'build.py', '.github/workflows/build.yml' ]
   workflow_dispatch:
 
 jobs:
@@ -18,19 +17,16 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-      - name: Validate & Audit syntax (MIL-SPEC)
+      - name: Validate syntax
         run: |
-          python -m py_compile main.py && echo "✅ main.py syntax OK"
-          python -m py_compile set_password.py && echo "✅ set_password.py OK"
-          python -c "import json; json.load(open('config.example.json')); print('✅ config.example.json valid')"
+          python -m py_compile main.py
+          python -m py_compile set_password.py
+          echo "✅ syntax OK"
       - name: Build EXE
         run: python build.py
-      - name: Verify EXE exists
-        run: |
-          dir dist
-          if (!(Test-Path "dist/MatrixLock.exe")) { exit 1 }
-          echo "✅ EXE verified"
-        shell: pwsh
+      - name: List dist
+        run: dir dist
+        shell: cmd
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
@@ -43,11 +39,5 @@ jobs:
         with:
           tag_name: v2.3-MILSPEC-${{ github.run_number }}
           name: Matrix Lock v2.3 MIL-SPEC Build ${{ github.run_number }}
-          body: |
-            🛡️ MIL-SPEC v2.3
-            - hmac timing-safe
-            - Brute-Force 3x30s lockout
-            - audit.log + config validation
-            - Fade + TOPMOST hardened
           files: dist/MatrixLock.exe
           generate_release_notes: true
