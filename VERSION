@@ -1,6 +1,0 @@
-2.3.0-MIL-SPEC
-Build: 2026-10-11
-Status: AUDITED | HARDENED | BUILD-FIXED
-MIL-SPEC: hmac + brute-force 3x30s + audit.log + validate_config + TOPMOST + .gitignore
-Artifacts: dist/MatrixLock.exe (windows-latest, python 3.11, pyinstaller 6.10.1)
-Last-Fix: build.py simplified (no add-data), build.yml simplified (no pwsh verify), push trigger all
