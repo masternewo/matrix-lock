@@ -1,14 +1,38 @@
+# Python
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
+*.pyw
+*.pdb
 build/
 dist/
 *.spec
 *.egg-info/
 venv/
+.venv/
+env/
 .env
-config.json
 *.log
+*.sqlite3
+
+# Config secrets - نظامی: هرگز کامیت نشود
+config.json
+audit.log
+
+# OS
 .DS_Store
 Thumbs.db
+desktop.ini
+*.lnk
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# PyInstaller
+*.manifest
+*.pyinstaller
