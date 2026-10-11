@@ -3,8 +3,6 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
-  pull_request:
-    branches: [main]
 
 jobs:
   build:
@@ -21,31 +19,29 @@ jobs:
           python-version: "3.11"
           cache: pip
 
-      - name: Install dependencies
+      - name: Install base dependencies
         run: |
           python -m pip install --upgrade pip setuptools wheel
-          pip install pygame==2.5.2 pyinstaller==6.10.1
+          pip install -r requirements.txt
+          pip install pyinstaller==6.10.1
           python -c "import pygame; print('pygame', pygame.version.ver)"
-          python -c "import PyInstaller; print('PyInstaller', PyInstaller.__version__)"
+          python -c "import PyInstaller; print('pyinstaller', PyInstaller.__version__)"
+          python -c "import sys; print(sys.version)"
 
       - name: Verify syntax
-        run: |
-          python -m py_compile main.py
-          python -m py_compile set_password.py
-          python -m py_compile build.py
-          echo syntax OK
+        run: python -m py_compile main.py set_password.py build.py
 
       - name: Build EXE
-        run: python -m PyInstaller --onefile --noconsole --clean --name MatrixLock main.py --log-level=WARN
+        run: pyinstaller --onefile --noconsole --clean --name MatrixLock main.py --log-level=WARN
 
-      - name: Show dist contents
+      - name: List dist
         if: always()
         shell: cmd
         run: |
-          echo === current dir ===
+          echo === dir ===
           dir
           echo === dist ===
-          if exist dist (dir dist /s) else (echo NO dist folder)
+          if exist dist ( dir dist /s ) else ( echo NO dist folder! )
 
       - name: Upload artifact
         if: always()
