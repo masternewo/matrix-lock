@@ -8,18 +8,30 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install pygame==2.5.2 pyinstaller==6.10.1
-      - name: Verify
-        run: python -m py_compile main.py
+          python -c "import pygame; print('pygame', pygame.version.ver)"
+
+      - name: Verify syntax
+        run: python -m py_compile main.py set_password.py build.py
+
       - name: Build EXE
-        run: pyinstaller --onefile --noconsole --clean --name MatrixLock main.py
+        run: python -m PyInstaller --onefile --noconsole --clean --name MatrixLock main.py
+
+      - name: Check dist
+        shell: cmd
+        run: dir dist
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:

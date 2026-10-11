@@ -1,6 +1,12 @@
 # -*- coding: utf-8 -*-
-"""Build script - pyinstaller onefile"""
-import subprocess, sys
+"""Build MatrixLock EXE - run: python build.py"""
+import subprocess
+import sys
+
 cmd = [sys.executable, "-m", "PyInstaller", "--onefile", "--noconsole", "--clean", "--name", "MatrixLock", "main.py"]
-print(" ".join(cmd))
-raise SystemExit(subprocess.call(cmd))
+print("Running:", " ".join(cmd))
+ret = subprocess.call(cmd)
+if ret != 0:
+    print("Build failed with code", ret)
+    sys.exit(ret)
+print("Done. Output: dist/MatrixLock.exe")
