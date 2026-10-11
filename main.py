@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-Matrix Lock v2.3 MIL-SPEC Step 3-4
-افزوده: آدیت‌لاگ + اعتبارسنجی Config + TOPMOST قوی
+Matrix Lock - قفل هوشمند صفحه
+افکت ماتریکس + قفل خودکار + پوشش هوشمند + حفاظت رمز
+- مقایسه امن رمز با hmac
+- قفل موقت بعد از ۳ تلاش ناموفق
+- لاگ رویدادها و اعتبارسنجی تنظیمات
 """
 import pygame
 import random
@@ -31,7 +34,7 @@ DEFAULT_CONFIG = {
 
 WIDTH, HEIGHT = 0, 0
 
-# MIL-SPEC
+# امنیت: محدودیت تلاش
 MAX_ATTEMPTS = 3
 LOCKOUT_DURATION = 30
 
@@ -244,7 +247,7 @@ def main():
         WIDTH, HEIGHT = 1920, 1080
 
     screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.NOFRAME | pygame.DOUBLEBUF)
-    pygame.display.set_caption("Matrix Lock v2.3 MIL-SPEC")
+    pygame.display.set_caption("Matrix Lock")
     clock = pygame.time.Clock()
 
     pygame.mouse.set_visible(False)
@@ -605,7 +608,7 @@ def main():
                 screen.blit(t3, ((WIDTH - t3.get_width())//2, HEIGHT//2 + 45))
                 t4 = font_small.render("ESC خروج", True, (90,170,90))
                 screen.blit(t4, ((WIDTH - t4.get_width())//2, HEIGHT//2 + 75))
-        wm = font_small.render("Matrix Lock v2.3 MIL-SPEC | github.com/masternewo/matrix-lock", True, (0,180,70))
+        wm = font_small.render("Matrix Lock | github.com/masternewo/matrix-lock", True, (0,180,70))
         screen.blit(wm, (14, HEIGHT-24))
         pygame.display.flip()
     pygame.quit()
