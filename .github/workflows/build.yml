@@ -1,0 +1,27 @@
+name: Build EXE
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install
+        run: pip install pygame==2.5.2 pyinstaller==6.10.1
+
+      - name: Build
+        run: pyinstaller --onefile --noconsole --name MatrixLock main.py
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: MatrixLock-exe
+          path: dist/MatrixLock.exe
