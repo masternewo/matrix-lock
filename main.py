@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Matrix Lock v2.2 MIL-SPEC Step 3-1
-افزوده: مقایسه امن هش (hmac) + ضد Brute-Force (قفل 30 ثانیه بعد 3 اشتباه)
-بقیه کد بدون تغییر - مرحله ای برای جلوگیری از خطا
+Matrix Lock v2.3 MIL-SPEC Step 3-4
+افزوده: آدیت‌لاگ + اعتبارسنجی Config + TOPMOST قوی
 """
 import pygame
 import random
@@ -19,6 +18,7 @@ from datetime import datetime
 
 # ===================== تنظیمات =====================
 CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
+AUDIT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "audit.log")
 DEFAULT_CONFIG = {
     "password_hash": "",
     "idle_timeout": 60,
@@ -31,12 +31,42 @@ DEFAULT_CONFIG = {
 
 WIDTH, HEIGHT = 0, 0
 
-# MIL-SPEC: ضد Brute-Force
+# MIL-SPEC
 MAX_ATTEMPTS = 3
-LOCKOUT_DURATION = 30  # ثانیه
+LOCKOUT_DURATION = 30
+
+def audit_log(action, success=None):
+    try:
+        ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        line = f"[{ts}] {action}"
+        if success is not None:
+            line += f" success={success}"
+        with open(AUDIT_PATH, "a", encoding="utf-8") as f:
+            f.write(line + "\n")
+    except:
+        pass
+
+def validate_config(cfg):
+    try:
+        cfg["idle_timeout"] = max(0, min(3600, int(cfg["idle_timeout"])))
+    except: cfg["idle_timeout"] = 60
+    try:
+        cfg["hide_timeout"] = max(0, min(600, int(cfg["hide_timeout"])))
+    except: cfg["hide_timeout"] = 30
+    try:
+        cfg["font_size"] = max(10, min(32, int(cfg["font_size"])))
+    except: cfg["font_size"] = 18
+    try:
+        cfg["matrix_speed"] = max(0.2, min(3.0, float(cfg["matrix_speed"])))
+    except: cfg["matrix_speed"] = 1.0
+    try:
+        c = cfg["matrix_color"]
+        if not (isinstance(c, list) and len(c)==3): raise ValueError
+        cfg["matrix_color"] = [max(0,min(255,int(x))) for x in c]
+    except: cfg["matrix_color"] = [0,255,70]
+    return cfg
 
 def verify_password(input_pw: str, stored_hash: str) -> bool:
-    """مقایسه امن ضد timing-attack"""
     return hmac.compare_digest(hash_password(input_pw), stored_hash)
 
 def load_config():
@@ -51,12 +81,14 @@ def load_config():
         for k, v in DEFAULT_CONFIG.items():
             if k not in cfg:
                 cfg[k] = v
+        cfg = validate_config(cfg)
         return cfg
     except:
-        return DEFAULT_CONFIG.copy()
+        return validate_config(DEFAULT_CONFIG.copy())
 
 def save_config(cfg):
     try:
+        cfg = validate_config(cfg.copy())
         with open(CONFIG_PATH, "w", encoding="utf-8") as f:
             json.dump(cfg, f, ensure_ascii=False, indent=2)
     except:
@@ -80,8 +112,13 @@ def get_idle_duration():
 def make_topmost():
     try:
         hwnd = pygame.display.get_wm_info()["window"]
-        ctypes.windll.user32.SetWindowPos(hwnd, -1, 0, 0, 0, 0, 0x0001 | 0x0002)
+        HWND_TOPMOST = -1
+        SWP_NOMOVE = 0x0002
+        SWP_NOSIZE = 0x0001
+        SWP_SHOWWINDOW = 0x0040
+        ctypes.windll.user32.SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW)
         ctypes.windll.user32.ShowWindow(hwnd, 3)
+        ctypes.windll.user32.SetForegroundWindow(hwnd)
     except:
         pass
 
@@ -207,7 +244,7 @@ def main():
         WIDTH, HEIGHT = 1920, 1080
 
     screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.NOFRAME | pygame.DOUBLEBUF)
-    pygame.display.set_caption("Matrix Lock v2.2 MIL-SPEC")
+    pygame.display.set_caption("Matrix Lock v2.3 MIL-SPEC")
     clock = pygame.time.Clock()
 
     pygame.mouse.set_visible(False)
@@ -237,6 +274,8 @@ def main():
         config["password_hash"] = hash_password("1234")
         save_config(config)
 
+    audit_log("SYSTEM_START locked=true")
+
     input_pw = ""
     message = ""
     msg_color = (255, 255, 100)
@@ -246,7 +285,6 @@ def main():
     box_alpha = 255
     FADE_SPEED = 18
 
-    # MIL-SPEC brute-force
     failed_attempts = 0
     lockout_until = 0
 
@@ -279,7 +317,6 @@ def main():
         time_txt = font_mid.render(now, True, (0,255,70))
         time_txt.set_alpha(alpha)
         surf.blit(time_txt, (box_x + (box_w - time_txt.get_width())//2, box_y + 112))
-        # نمایش قفل brute-force
         if time.time() < lockout_until:
             remain = int(lockout_until - time.time())
             lock_txt = font_small.render(f"⛔ قفل امنیتی: {remain} ثانیه صبر کنید ({failed_attempts}/{MAX_ATTEMPTS})", True, (255,60,60))
@@ -336,6 +373,7 @@ def main():
                 msg_time = time.time()
                 pygame.mouse.set_visible(False)
                 make_topmost()
+                audit_log("AUTO_LOCK idle_timeout")
         if locked:
             elapsed = time.time() - lock_start_time
             if elapsed > config["hide_timeout"] and config["hide_timeout"] > 0 and input_pw == "":
@@ -363,8 +401,10 @@ def main():
                     message = "در حالت قفل نمیتوان بست! رمز را وارد کنید"
                     msg_color = (255,80,80)
                     msg_time = time.time()
+                    audit_log("BLOCK_CLOSE_ATTEMPT")
                     make_topmost()
                 else:
+                    audit_log("SYSTEM_EXIT")
                     running = False
             elif event.type == pygame.KEYDOWN:
                 mods = pygame.key.get_mods()
@@ -379,6 +419,7 @@ def main():
                         message = "قفل دستی فعال شد"
                         msg_color = (0,255,120)
                         msg_time = time.time()
+                        audit_log("MANUAL_LOCK Ctrl+Shift+L")
                     continue
                 if changing_pw:
                     if event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER:
@@ -411,6 +452,7 @@ def main():
                                 message = "✅ رمز با موفقیت تغییر کرد!"
                                 msg_color = (0,255,120)
                                 msg_time = time.time()
+                                audit_log("PASSWORD_CHANGED via F2")
                     elif event.key == pygame.K_ESCAPE:
                         changing_pw = False
                         new_pw = ""
@@ -432,6 +474,7 @@ def main():
                     continue
                 if not locked:
                     if event.key == pygame.K_ESCAPE:
+                        audit_log("SYSTEM_EXIT ESC")
                         running = False
                     elif event.key == pygame.K_F2:
                         changing_pw = True
@@ -451,6 +494,7 @@ def main():
                         message = f"⛔ قفل امنیتی! {int(lockout_until - time.time())} ثانیه صبر کنید"
                         msg_color = (255,80,80)
                         msg_time = time.time()
+                        audit_log("LOGIN_BLOCKED lockout")
                     elif verify_password(input_pw, config["password_hash"]):
                         locked = False
                         input_pw = ""
@@ -459,11 +503,14 @@ def main():
                         message = ""
                         box_alpha = 255
                         pygame.mouse.set_visible(True)
+                        audit_log("LOGIN_SUCCESS", True)
                     else:
                         failed_attempts += 1
+                        audit_log(f"LOGIN_FAIL attempt {failed_attempts}/{MAX_ATTEMPTS}", False)
                         if failed_attempts >= MAX_ATTEMPTS:
                             lockout_until = time.time() + LOCKOUT_DURATION
                             message = f"❌ 3 بار اشتباه! {LOCKOUT_DURATION} ثانیه قفل شدید"
+                            audit_log("LOCKOUT_ACTIVATED 30s")
                         else:
                             message = f"❌ رمز نادرست! ({failed_attempts}/{MAX_ATTEMPTS})"
                         msg_color = (255,70,70)
@@ -558,7 +605,7 @@ def main():
                 screen.blit(t3, ((WIDTH - t3.get_width())//2, HEIGHT//2 + 45))
                 t4 = font_small.render("ESC خروج", True, (90,170,90))
                 screen.blit(t4, ((WIDTH - t4.get_width())//2, HEIGHT//2 + 75))
-        wm = font_small.render("Matrix Lock v2.2 MIL-SPEC | github.com/masternewo/matrix-lock", True, (0,180,70))
+        wm = font_small.render("Matrix Lock v2.3 MIL-SPEC | github.com/masternewo/matrix-lock", True, (0,180,70))
         screen.blit(wm, (14, HEIGHT-24))
         pygame.display.flip()
     pygame.quit()
@@ -567,6 +614,7 @@ def main():
             ctypes.windll.user32.UnhookWindowsHookEx(HOOK_HANDLE)
     except:
         pass
+    audit_log("SYSTEM_SHUTDOWN")
     sys.exit(0)
 
 if __name__ == "__main__":
