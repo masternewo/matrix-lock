@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2026 masternewo - Matrix Lock MIL-SPEC v2.2
+Copyright (c) 2026 masternewo - Matrix Lock
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -19,6 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
----
-Security Notice: This software implements MIL-SPEC lockout (3-attempt lockout, hmac compare, audit log). Ctrl+Alt+Del cannot be blocked by design (Windows SAS).
